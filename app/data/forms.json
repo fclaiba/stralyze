@@ -1,0 +1,16 @@
+{
+  "forms": [
+    {
+      "id": "frm_001",
+      "clientId": "cli_001",
+      "type": "contact",
+      "status": "pending",
+      "data": {
+        "message": "Initial contact form",
+        "preferredContact": "email"
+      },
+      "createdAt": "2024-02-16T12:00:00Z",
+      "updatedAt": "2024-02-16T12:00:00Z"
+    }
+  ]
+}
