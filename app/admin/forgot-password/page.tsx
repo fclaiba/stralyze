@@ -20,7 +20,7 @@ type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>
 
 export default function ForgotPasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isEmailSent, setIsEmailSent] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
 
@@ -31,23 +31,22 @@ export default function ForgotPasswordPage() {
     },
   })
 
-  async function onSubmit(values: ForgotPasswordFormData) {
+  async function handleForgotPassword(values: ForgotPasswordFormData) {
     setIsSubmitting(true)
     try {
-      // Simulate sending reset email
+      // Simular envío de email de recuperación
       await new Promise(resolve => setTimeout(resolve, 2000))
       
+      setEmailSent(true)
       toast({
-        title: "Reset email sent",
-        description: "If an account with that email exists, you will receive a password reset link.",
+        title: "Recovery email sent",
+        description: "If an account exists with that email, you will receive a password reset link.",
       })
-      
-      setIsEmailSent(true)
     } catch (error) {
-      console.error("Reset password error:", error)
+      console.error("Forgot password error:", error)
       toast({
         title: "Error",
-        description: "Failed to send reset email. Please try again.",
+        description: "Failed to send recovery email. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -55,7 +54,7 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  if (isEmailSent) {
+  if (emailSent) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 p-4">
         <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm border-0 shadow-2xl">
@@ -68,21 +67,15 @@ export default function ForgotPasswordPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="text-center text-sm text-gray-600">
-              <p>Didn't receive the email? Check your spam folder or</p>
-              <Button
-                variant="link"
-                className="p-0 text-blue-600 hover:text-blue-700 font-semibold"
-                onClick={() => setIsEmailSent(false)}
-              >
-                try again with a different email address
-              </Button>
+            <div className="text-center">
+              <Mail className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+              <p className="text-sm text-gray-600 mb-6">
+                Click the link in the email to reset your password. The link will expire in 1 hour.
+              </p>
             </div>
-            
             <Button
-              variant="outline"
-              className="w-full"
               onClick={() => router.push("/admin/login")}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Login
@@ -106,7 +99,7 @@ export default function ForgotPasswordPage() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(handleForgotPassword)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="email"
@@ -137,7 +130,7 @@ export default function ForgotPasswordPage() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending Reset Link...
+                    Sending email...
                   </>
                 ) : (
                   "Send Reset Link"
@@ -147,14 +140,15 @@ export default function ForgotPasswordPage() {
           </Form>
 
           <div className="mt-6 text-center">
-            <Button
-              variant="link"
-              className="p-0 text-blue-600 hover:text-blue-700 font-semibold"
-              onClick={() => router.push("/admin/login")}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Login
-            </Button>
+            <p className="text-sm text-gray-600">
+              Remember your password?{" "}
+              <a
+                href="/admin/login"
+                className="text-blue-600 hover:text-blue-700 font-medium"
+              >
+                Sign in
+              </a>
+            </p>
           </div>
         </CardContent>
       </Card>

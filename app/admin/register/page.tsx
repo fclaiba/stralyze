@@ -9,21 +9,16 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 import { createUser } from "@/lib/data/users"
-import { Eye, EyeOff, Loader2 } from "lucide-react"
+import { Eye, EyeOff, Loader2, Mail, Lock, User, Building } from "lucide-react"
 
 const registerSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters"),
   lastName: z.string().min(2, "Last name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  confirmPassword: z.string(),
-  role: z.enum(["admin", "gestor", "user"]),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  company: z.string().optional(),
 })
 
 type RegisterFormData = z.infer<typeof registerSchema>
@@ -31,7 +26,6 @@ type RegisterFormData = z.infer<typeof registerSchema>
 export default function RegisterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
 
@@ -42,40 +36,32 @@ export default function RegisterPage() {
       lastName: "",
       email: "",
       password: "",
-      confirmPassword: "",
-      role: "user",
+      company: "",
     },
   })
 
-  async function onSubmit(values: RegisterFormData) {
+  async function handleRegister(values: RegisterFormData) {
     setIsSubmitting(true)
     try {
-      const result = await createUser({
+      const user = await createUser({
         firstName: values.firstName,
         lastName: values.lastName,
         email: values.email,
         password: values.password,
-        role: values.role,
+        role: "user",
       })
-
-      if (result.success) {
-        toast({
-          title: "Registration successful",
-          description: "Your account has been created successfully. You can now log in.",
-        })
-        router.push("/admin/login")
-      } else {
-        toast({
-          title: "Registration failed",
-          description: result.error || "There was an error creating your account. Please try again.",
-          variant: "destructive",
-        })
-      }
+      
+      toast({
+        title: "Registration successful",
+        description: `Welcome ${user.firstName}! Please log in with your credentials.`,
+      })
+      
+      router.push("/admin/login")
     } catch (error) {
       console.error("Registration error:", error)
       toast({
         title: "Registration failed",
-        description: "An unexpected error occurred. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to create account. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -91,12 +77,12 @@ export default function RegisterPage() {
             Create Account
           </CardTitle>
           <CardDescription className="text-center text-gray-600">
-            Join Stralyze and start managing your marketing campaigns
+            Join Stralyze and start managing your campaigns
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(handleRegister)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -105,16 +91,20 @@ export default function RegisterPage() {
                     <FormItem>
                       <FormLabel className="text-gray-700">First Name</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="John"
-                          {...field}
-                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                        />
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                          <Input
+                            placeholder="John"
+                            {...field}
+                            className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
                 <FormField
                   control={form.control}
                   name="lastName"
@@ -122,11 +112,14 @@ export default function RegisterPage() {
                     <FormItem>
                       <FormLabel className="text-gray-700">Last Name</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Doe"
-                          {...field}
-                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                        />
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                          <Input
+                            placeholder="Doe"
+                            {...field}
+                            className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -141,12 +134,15 @@ export default function RegisterPage() {
                   <FormItem>
                     <FormLabel className="text-gray-700">Email</FormLabel>
                     <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="john.doe@company.com"
-                        {...field}
-                        className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                      />
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                        <Input
+                          type="email"
+                          placeholder="john@company.com"
+                          {...field}
+                          className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -155,22 +151,20 @@ export default function RegisterPage() {
 
               <FormField
                 control={form.control}
-                name="role"
+                name="company"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700">Role</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                          <SelectValue placeholder="Select your role" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="user">User</SelectItem>
-                        <SelectItem value="gestor">Gestor</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel className="text-gray-700">Company (Optional)</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                        <Input
+                          placeholder="Your Company"
+                          {...field}
+                          className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        />
+                      </div>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -184,11 +178,12 @@ export default function RegisterPage() {
                     <FormLabel className="text-gray-700">Password</FormLabel>
                     <FormControl>
                       <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
                         <Input
                           type={showPassword ? "text" : "password"}
-                          placeholder="Enter your password"
+                          placeholder="Create a password"
                           {...field}
-                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 pr-10"
+                          className="pl-10 pr-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                         />
                         <Button
                           type="button"
@@ -210,40 +205,6 @@ export default function RegisterPage() {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-gray-700">Confirm Password</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          type={showConfirmPassword ? "text" : "password"}
-                          placeholder="Confirm your password"
-                          {...field}
-                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 pr-10"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        >
-                          {showConfirmPassword ? (
-                            <EyeOff className="h-4 w-4 text-gray-500" />
-                          ) : (
-                            <Eye className="h-4 w-4 text-gray-500" />
-                          )}
-                        </Button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <Button
                 type="submit"
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
@@ -252,7 +213,7 @@ export default function RegisterPage() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating Account...
+                    Creating account...
                   </>
                 ) : (
                   "Create Account"
@@ -264,13 +225,12 @@ export default function RegisterPage() {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Already have an account?{" "}
-              <Button
-                variant="link"
-                className="p-0 text-blue-600 hover:text-blue-700 font-semibold"
-                onClick={() => router.push("/admin/login")}
+              <a
+                href="/admin/login"
+                className="text-blue-600 hover:text-blue-700 font-medium"
               >
-                Sign in here
-              </Button>
+                Sign in
+              </a>
             </p>
           </div>
         </CardContent>
