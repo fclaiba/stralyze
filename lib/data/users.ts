@@ -29,6 +29,15 @@ const mockUsers: User[] = [
     role: 'admin',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+  },
+  {
+    id: '3',
+    firstName: 'User',
+    lastName: 'Test',
+    email: '123@gmail.com',
+    role: 'admin',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   }
 ]
 
