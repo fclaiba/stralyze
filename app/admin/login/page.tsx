@@ -38,12 +38,20 @@ export default function LoginPage() {
   })
 
   async function handleLogin(values: LoginFormData) {
+    console.log("🔐 Iniciando proceso de login...")
+    console.log("📧 Email:", values.email)
+    console.log("🔑 Password:", values.password)
+    
     setIsSubmitting(true)
     try {
+      console.log("🔄 Llamando a loginUser...")
       const user = await loginUser(values.email, values.password)
+      console.log("✅ Login exitoso, usuario:", user)
       
       // Actualizar el contexto de autenticación
+      console.log("🔄 Actualizando contexto de autenticación...")
       login(user)
+      console.log("✅ Contexto de autenticación actualizado")
       
       toast({
         title: "Login successful",
@@ -52,9 +60,14 @@ export default function LoginPage() {
       
       // Obtener la URL de redirección o usar el dashboard por defecto
       const redirectTo = searchParams.get('redirectTo') || '/admin/dashboard'
-      router.push(redirectTo)
+      console.log("🎯 Redirigiendo a:", redirectTo)
+      
+      // Usar window.location.href para redirección más robusta
+      console.log("🔄 Iniciando redirección con window.location.href...")
+      window.location.href = redirectTo
+      
     } catch (error) {
-      console.error("Login error:", error)
+      console.error("❌ Error en login:", error)
       toast({
         title: "Login failed",
         description: error instanceof Error ? error.message : "Invalid email or password. Please try again.",

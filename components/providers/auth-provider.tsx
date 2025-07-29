@@ -21,44 +21,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
 
   const login = (userData: User) => {
+    console.log("🔄 AuthProvider: Actualizando usuario en contexto...")
+    console.log("👤 Usuario a establecer:", userData)
     setUser(userData)
+    console.log("✅ AuthProvider: Usuario establecido en contexto")
   }
 
   const logout = async () => {
+    console.log("🔄 AuthProvider: Iniciando logout...")
     try {
       await logoutUser()
+      console.log("✅ AuthProvider: Logout exitoso")
       setUser(null)
+      console.log("🔄 AuthProvider: Usuario limpiado del contexto")
       router.push('/admin/login')
     } catch (error) {
-      console.error('Logout error:', error)
+      console.error('❌ AuthProvider: Error en logout:', error)
     }
   }
 
   const refreshUser = async () => {
+    console.log("🔄 AuthProvider: Refrescando usuario...")
     try {
       const userData = await getCurrentUser()
+      console.log("👤 AuthProvider: Usuario actual obtenido:", userData)
       setUser(userData)
     } catch (error) {
-      console.error('Refresh user error:', error)
+      console.error('❌ AuthProvider: Error refrescando usuario:', error)
       setUser(null)
     }
   }
 
   useEffect(() => {
     const initializeAuth = async () => {
+      console.log("🔄 AuthProvider: Inicializando autenticación...")
       try {
         const userData = await getCurrentUser()
+        console.log("👤 AuthProvider: Usuario inicial:", userData)
         setUser(userData)
       } catch (error) {
-        console.error('Auth initialization error:', error)
+        console.error('❌ AuthProvider: Error inicializando autenticación:', error)
         setUser(null)
       } finally {
         setLoading(false)
+        console.log("✅ AuthProvider: Inicialización completada")
       }
     }
 
     initializeAuth()
   }, [])
+
+  // Log cuando el estado del usuario cambia
+  useEffect(() => {
+    console.log("🔄 AuthProvider: Estado del usuario cambiado:", user)
+  }, [user])
+
+  // Log cuando el estado de loading cambia
+  useEffect(() => {
+    console.log("🔄 AuthProvider: Estado de loading cambiado:", loading)
+  }, [loading])
 
   const value = {
     user,
