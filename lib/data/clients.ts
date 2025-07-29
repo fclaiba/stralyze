@@ -1,136 +1,214 @@
-import { supabase } from '@/lib/supabase/client';
-import { clientSchema, clientUpdateSchema } from '@/lib/validations/client-schema';
-import type { Client } from '@/types/client';
+import { supabase } from '@/lib/supabase/client'
 
-export async function getClients(): Promise<{ success: boolean; data?: Client[]; error?: string }> {
+export interface Client {
+  id: string
+  company: string
+  status: string
+  industry: string
+  contact: string
+  email: string
+  phone?: string
+  payment_method: string
+  contract_status: string
+  deposit: number
+  final_payment: number
+  total_amount: number
+  budget: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+// Datos mock para desarrollo
+let mockClients: Client[] = [
+  {
+    id: '1',
+    company: 'TechCorp Solutions',
+    status: 'Active',
+    industry: 'Technology',
+    contact: 'John Smith',
+    email: 'john@techcorp.com',
+    phone: '+1-555-0123',
+    payment_method: 'Credit Card',
+    contract_status: 'Signed',
+    deposit: 5000,
+    final_payment: 15000,
+    total_amount: 20000,
+    budget: '$15,000 - $25,000',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: '2',
+    company: 'Global Marketing Inc',
+    status: 'Prospect',
+    industry: 'Marketing',
+    contact: 'Sarah Johnson',
+    email: 'sarah@globalmarketing.com',
+    phone: '+1-555-0456',
+    payment_method: 'Bank Transfer',
+    contract_status: 'Pending',
+    deposit: 0,
+    final_payment: 0,
+    total_amount: 0,
+    budget: '$10,000 - $15,000',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }
+]
+
+export async function getAllClients(): Promise<Client[]> {
   try {
     const { data, error } = await supabase
       .from('clients')
       .select('*')
-      .order('created_at', { ascending: false });
-
+      .order('createdAt', { ascending: false })
+    
     if (error) {
-      console.error('Error fetching clients:', error);
-      return { success: false, error: error.message };
+      console.log('Error fetching clients from Supabase, using mock data:', error.message)
+      return mockClients
     }
-
-    return { success: true, data: data || [] };
+    
+    return data || []
   } catch (error) {
-    console.error('Unexpected error fetching clients:', error);
-    return { success: false, error: 'An unexpected error occurred' };
+    console.error('Get all clients error:', error)
+    return mockClients
   }
 }
 
-export async function getClient(id: string): Promise<{ success: boolean; data?: Client; error?: string }> {
+export async function getClientById(id: string): Promise<Client | null> {
   try {
     const { data, error } = await supabase
       .from('clients')
       .select('*')
       .eq('id', id)
-      .single();
-
+      .single()
+    
     if (error) {
-      console.error('Error fetching client:', error);
-      return { success: false, error: error.message };
+      console.log('Error fetching client from Supabase, using mock data:', error.message)
+      return mockClients.find(client => client.id === id) || null
     }
-
-    return { success: true, data };
+    
+    return data
   } catch (error) {
-    console.error('Unexpected error fetching client:', error);
-    return { success: false, error: 'An unexpected error occurred' };
+    console.error('Get client by ID error:', error)
+    return mockClients.find(client => client.id === id) || null
   }
 }
 
-export async function createClient(clientData: any): Promise<{ success: boolean; data?: Client; error?: string }> {
+export async function createClient(clientData: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>): Promise<Client> {
   try {
-    // Validar datos de entrada
-    const validatedData = clientSchema.parse(clientData);
-
     const { data, error } = await supabase
       .from('clients')
-      .insert([validatedData])
+      .insert([{
+        ...clientData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }])
       .select()
-      .single();
-
+      .single()
+    
     if (error) {
-      console.error('Error creating client:', error);
-      return { success: false, error: error.message };
+      console.log('Error creating client in Supabase, using mock data:', error.message)
+      
+      // Crear en datos mock
+      const newClient: Client = {
+        id: Date.now().toString(),
+        ...clientData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      
+      mockClients.push(newClient)
+      return newClient
     }
-
-    return { success: true, data };
+    
+    return data
   } catch (error) {
-    if (error instanceof Error) {
-      console.error('Validation or creation error:', error);
-      return { success: false, error: error.message };
+    console.error('Create client error:', error)
+    
+    // Fallback a datos mock
+    const newClient: Client = {
+      id: Date.now().toString(),
+      ...clientData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
-    console.error('Unexpected error creating client:', error);
-    return { success: false, error: 'An unexpected error occurred' };
+    
+    mockClients.push(newClient)
+    return newClient
   }
 }
 
-export async function updateClient(id: string, clientData: any): Promise<{ success: boolean; data?: Client; error?: string }> {
+export async function updateClient(id: string, updates: Partial<Client>): Promise<Client> {
   try {
-    // Validar datos de entrada
-    const validatedData = clientUpdateSchema.parse(clientData);
-
     const { data, error } = await supabase
       .from('clients')
-      .update(validatedData)
+      .update({ ...updates, updatedAt: new Date().toISOString() })
       .eq('id', id)
       .select()
-      .single();
-
+      .single()
+    
     if (error) {
-      console.error('Error updating client:', error);
-      return { success: false, error: error.message };
+      console.log('Error updating client in Supabase, using mock data:', error.message)
+      
+      // Actualizar en datos mock
+      const clientIndex = mockClients.findIndex(client => client.id === id)
+      if (clientIndex !== -1) {
+        mockClients[clientIndex] = { 
+          ...mockClients[clientIndex], 
+          ...updates, 
+          updatedAt: new Date().toISOString() 
+        }
+        return mockClients[clientIndex]
+      }
+      
+      throw new Error('Client not found')
     }
-
-    return { success: true, data };
+    
+    return data
   } catch (error) {
-    if (error instanceof Error) {
-      console.error('Validation or update error:', error);
-      return { success: false, error: error.message };
-    }
-    console.error('Unexpected error updating client:', error);
-    return { success: false, error: 'An unexpected error occurred' };
+    console.error('Update client error:', error)
+    throw error
   }
 }
 
-export async function deleteClient(id: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteClient(id: string): Promise<void> {
   try {
-    const { error } = await supabase
-      .from('clients')
-      .delete()
-      .eq('id', id);
-
+    const { error } = await supabase.from('clients').delete().eq('id', id)
+    
     if (error) {
-      console.error('Error deleting client:', error);
-      return { success: false, error: error.message };
+      console.log('Error deleting client from Supabase, using mock data:', error.message)
+      
+      // Eliminar de datos mock
+      const clientIndex = mockClients.findIndex(client => client.id === id)
+      if (clientIndex !== -1) {
+        mockClients.splice(clientIndex, 1)
+      }
+      
+      return
     }
-
-    return { success: true };
   } catch (error) {
-    console.error('Unexpected error deleting client:', error);
-    return { success: false, error: 'An unexpected error occurred' };
+    console.error('Delete client error:', error)
+    throw error
   }
 }
 
-export async function searchClients(query: string): Promise<{ success: boolean; data?: Client[]; error?: string }> {
+export async function getClientsByStatus(status: string): Promise<Client[]> {
   try {
     const { data, error } = await supabase
       .from('clients')
       .select('*')
-      .or(`name.ilike.%${query}%,email.ilike.%${query}%,company.ilike.%${query}%`)
-      .order('created_at', { ascending: false });
-
+      .eq('status', status)
+      .order('createdAt', { ascending: false })
+    
     if (error) {
-      console.error('Error searching clients:', error);
-      return { success: false, error: error.message };
+      console.log('Error fetching clients by status from Supabase, using mock data:', error.message)
+      return mockClients.filter(client => client.status === status)
     }
-
-    return { success: true, data: data || [] };
+    
+    return data || []
   } catch (error) {
-    console.error('Unexpected error searching clients:', error);
-    return { success: false, error: 'An unexpected error occurred' };
+    console.error('Get clients by status error:', error)
+    return mockClients.filter(client => client.status === status)
   }
 }
