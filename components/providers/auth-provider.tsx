@@ -1,64 +1,75 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase/client"
+import { createContext, useContext, useEffect, useState } from 'react'
+import { User } from '@/lib/data/users'
+import { getCurrentUser, logoutUser } from '@/lib/data/users'
+import { useRouter } from 'next/navigation'
 
 interface AuthContextType {
-  isAuthenticated: boolean
-  user: any | null
-  login: (email: string, password: string) => Promise<void>
-  logout: () => void
-  isLoading: boolean
+  user: User | null
+  loading: boolean
+  login: (user: User) => void
+  logout: () => Promise<void>
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [user, setUser] = useState<any | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  useEffect(() => {
-    // Verificar la sesión actual al cargar
-    const session = document.cookie.includes('session=')
-    if (session) {
-      setIsAuthenticated(true)
-      // Aquí podrías obtener los datos del usuario si es necesario
-    }
-    setIsLoading(false)
-  }, [])
+  const login = (userData: User) => {
+    setUser(userData)
+  }
 
-  const login = async (email: string, password: string) => {
+  const logout = async () => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', email)
-        .eq('password', password)
-        .single()
-
-      if (error) throw error
-
-      setUser(data)
-      setIsAuthenticated(true)
-      document.cookie = `session=${data.id}; path=/`
+      await logoutUser()
+      setUser(null)
+      router.push('/admin/login')
     } catch (error) {
-      console.error('Login error:', error)
-      throw error
+      console.error('Logout error:', error)
     }
   }
 
-  const logout = () => {
-    setUser(null)
-    setIsAuthenticated(false)
-    document.cookie = 'session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
-    router.push('/admin/login')
+  const refreshUser = async () => {
+    try {
+      const userData = await getCurrentUser()
+      setUser(userData)
+    } catch (error) {
+      console.error('Refresh user error:', error)
+      setUser(null)
+    }
+  }
+
+  useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        const userData = await getCurrentUser()
+        setUser(userData)
+      } catch (error) {
+        console.error('Auth initialization error:', error)
+        setUser(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    initializeAuth()
+  }, [])
+
+  const value = {
+    user,
+    loading,
+    login,
+    logout,
+    refreshUser,
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout, isLoading }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )
@@ -67,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
+    throw new Error('useAuth must be used within an AuthProvider')
   }
   return context
 }

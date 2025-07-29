@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { useToast } from "@/components/ui/use-toast"
 import { loginUser } from "@/lib/data/users"
+import { useAuth } from "@/components/providers/auth-provider"
 import { Eye, EyeOff, Loader2, Mail, Lock } from "lucide-react"
 
 const loginSchema = z.object({
@@ -25,6 +26,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
+  const { login } = useAuth()
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -38,7 +40,9 @@ export default function LoginPage() {
     setIsSubmitting(true)
     try {
       const user = await loginUser(values.email, values.password)
-      document.cookie = `session=${user.id}; path=/`
+      
+      // Actualizar el contexto de autenticación
+      login(user)
       
       toast({
         title: "Login successful",
@@ -50,7 +54,7 @@ export default function LoginPage() {
       console.error("Login error:", error)
       toast({
         title: "Login failed",
-        description: "Invalid email or password. Please try again.",
+        description: error instanceof Error ? error.message : "Invalid email or password. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -146,27 +150,24 @@ export default function LoginPage() {
             </form>
           </Form>
 
-          <div className="mt-6 space-y-4 text-center">
-            <Button
-              variant="link"
-              className="p-0 text-blue-600 hover:text-blue-700 font-semibold"
-              onClick={() => router.push("/admin/forgot-password")}
-            >
-              Forgot your password?
-            </Button>
-            
-            <div className="border-t border-gray-200 pt-4">
-              <p className="text-sm text-gray-600">
-                Don't have an account?{" "}
-                <Button
-                  variant="link"
-                  className="p-0 text-blue-600 hover:text-blue-700 font-semibold"
-                  onClick={() => router.push("/admin/register")}
-                >
-                  Create one here
-                </Button>
-              </p>
-            </div>
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Don&apos;t have an account?{" "}
+              <a
+                href="/admin/register"
+                className="text-blue-600 hover:text-blue-700 font-medium"
+              >
+                Sign up
+              </a>
+            </p>
+            <p className="text-sm text-gray-600 mt-2">
+              <a
+                href="/admin/forgot-password"
+                className="text-blue-600 hover:text-blue-700 font-medium"
+              >
+                Forgot your password?
+              </a>
+            </p>
           </div>
         </CardContent>
       </Card>
