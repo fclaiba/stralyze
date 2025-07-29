@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -25,6 +25,7 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const { login } = useAuth()
 
@@ -49,7 +50,9 @@ export default function LoginPage() {
         description: `Welcome back, ${user.firstName}!`,
       })
       
-      router.push("/admin/dashboard")
+      // Obtener la URL de redirección o usar el dashboard por defecto
+      const redirectTo = searchParams.get('redirectTo') || '/admin/dashboard'
+      router.push(redirectTo)
     } catch (error) {
       console.error("Login error:", error)
       toast({
@@ -150,9 +153,9 @@ export default function LoginPage() {
             </form>
           </Form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center space-y-2">
             <p className="text-sm text-gray-600">
-              Don&apos;t have an account?{" "}
+              Don't have an account?{" "}
               <a
                 href="/admin/register"
                 className="text-blue-600 hover:text-blue-700 font-medium"
@@ -160,7 +163,7 @@ export default function LoginPage() {
                 Sign up
               </a>
             </p>
-            <p className="text-sm text-gray-600 mt-2">
+            <p className="text-sm text-gray-600">
               <a
                 href="/admin/forgot-password"
                 className="text-blue-600 hover:text-blue-700 font-medium"
