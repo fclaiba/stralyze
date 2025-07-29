@@ -14,8 +14,8 @@ export interface Client {
   final_payment: number
   total_amount: number
   budget: string
-  createdAt?: string
-  updatedAt?: string
+  created_at?: string
+  updated_at?: string
 }
 
 // Datos mock para desarrollo
@@ -34,8 +34,8 @@ let mockClients: Client[] = [
     final_payment: 15000,
     total_amount: 20000,
     budget: '$15,000 - $25,000',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   },
   {
     id: '2',
@@ -51,32 +51,35 @@ let mockClients: Client[] = [
     final_payment: 0,
     total_amount: 0,
     budget: '$10,000 - $15,000',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   }
 ]
 
 export async function getAllClients(): Promise<Client[]> {
   try {
+    console.log('🔄 Intentando obtener clientes de Supabase...')
     const { data, error } = await supabase
       .from('clients')
       .select('*')
-      .order('createdAt', { ascending: false })
+      .order('created_at', { ascending: false })
     
     if (error) {
-      console.log('Error fetching clients from Supabase, using mock data:', error.message)
+      console.log('⚠️ Error obteniendo clientes de Supabase, usando datos mock:', error.message)
       return mockClients
     }
     
+    console.log(`✅ ${data?.length || 0} clientes obtenidos de Supabase`)
     return data || []
   } catch (error) {
-    console.error('Get all clients error:', error)
+    console.error('❌ Error obteniendo clientes:', error)
     return mockClients
   }
 }
 
 export async function getClientById(id: string): Promise<Client | null> {
   try {
+    console.log(`🔄 Intentando obtener cliente ${id} de Supabase...`)
     const { data, error } = await supabase
       .from('clients')
       .select('*')
@@ -84,131 +87,209 @@ export async function getClientById(id: string): Promise<Client | null> {
       .single()
     
     if (error) {
-      console.log('Error fetching client from Supabase, using mock data:', error.message)
+      console.log('⚠️ Error obteniendo cliente de Supabase, usando datos mock:', error.message)
       return mockClients.find(client => client.id === id) || null
     }
     
+    console.log('✅ Cliente obtenido de Supabase')
     return data
   } catch (error) {
-    console.error('Get client by ID error:', error)
+    console.error('❌ Error obteniendo cliente por ID:', error)
     return mockClients.find(client => client.id === id) || null
   }
 }
 
-export async function createClient(clientData: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>): Promise<Client> {
+export async function createClient(clientData: Omit<Client, 'id' | 'created_at' | 'updated_at'>): Promise<Client> {
   try {
+    console.log('🔄 Intentando crear cliente en Supabase...')
+    
+    // Preparar datos para Supabase
+    const supabaseData = {
+      ...clientData,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+    
     const { data, error } = await supabase
       .from('clients')
-      .insert([{
-        ...clientData,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }])
+      .insert(supabaseData)
       .select()
       .single()
     
     if (error) {
-      console.log('Error creating client in Supabase, using mock data:', error.message)
+      console.log('⚠️ Error creando cliente en Supabase, usando datos mock:', error.message)
       
-      // Crear en datos mock
-      const newClient: Client = {
-        id: Date.now().toString(),
+      // Crear cliente mock
+      const mockClient: Client = {
+        id: `mock-${Date.now()}`,
         ...clientData,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       }
       
-      mockClients.push(newClient)
-      return newClient
+      mockClients.push(mockClient)
+      console.log('✅ Cliente creado en datos mock')
+      return mockClient
     }
     
+    console.log('✅ Cliente creado en Supabase')
     return data
   } catch (error) {
-    console.error('Create client error:', error)
+    console.error('❌ Error creando cliente:', error)
     
-    // Fallback a datos mock
-    const newClient: Client = {
-      id: Date.now().toString(),
+    // Crear cliente mock como fallback
+    const mockClient: Client = {
+      id: `mock-${Date.now()}`,
       ...clientData,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     }
     
-    mockClients.push(newClient)
-    return newClient
+    mockClients.push(mockClient)
+    return mockClient
   }
 }
 
 export async function updateClient(id: string, updates: Partial<Client>): Promise<Client> {
   try {
+    console.log(`🔄 Intentando actualizar cliente ${id} en Supabase...`)
+    
+    const updateData = {
+      ...updates,
+      updated_at: new Date().toISOString()
+    }
+    
     const { data, error } = await supabase
       .from('clients')
-      .update({ ...updates, updatedAt: new Date().toISOString() })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single()
     
     if (error) {
-      console.log('Error updating client in Supabase, using mock data:', error.message)
+      console.log('⚠️ Error actualizando cliente en Supabase, usando datos mock:', error.message)
       
-      // Actualizar en datos mock
-      const clientIndex = mockClients.findIndex(client => client.id === id)
-      if (clientIndex !== -1) {
-        mockClients[clientIndex] = { 
-          ...mockClients[clientIndex], 
-          ...updates, 
-          updatedAt: new Date().toISOString() 
+      // Actualizar cliente mock
+      const mockIndex = mockClients.findIndex(client => client.id === id)
+      if (mockIndex !== -1) {
+        mockClients[mockIndex] = {
+          ...mockClients[mockIndex],
+          ...updates,
+          updated_at: new Date().toISOString()
         }
-        return mockClients[clientIndex]
+        console.log('✅ Cliente actualizado en datos mock')
+        return mockClients[mockIndex]
       }
       
-      throw new Error('Client not found')
+      throw new Error('Cliente no encontrado')
     }
     
+    console.log('✅ Cliente actualizado en Supabase')
     return data
   } catch (error) {
-    console.error('Update client error:', error)
+    console.error('❌ Error actualizando cliente:', error)
+    
+    // Actualizar cliente mock como fallback
+    const mockIndex = mockClients.findIndex(client => client.id === id)
+    if (mockIndex !== -1) {
+      mockClients[mockIndex] = {
+        ...mockClients[mockIndex],
+        ...updates,
+        updated_at: new Date().toISOString()
+      }
+      return mockClients[mockIndex]
+    }
+    
     throw error
   }
 }
 
 export async function deleteClient(id: string): Promise<void> {
   try {
-    const { error } = await supabase.from('clients').delete().eq('id', id)
+    console.log(`🔄 Intentando eliminar cliente ${id} de Supabase...`)
+    
+    const { error } = await supabase
+      .from('clients')
+      .delete()
+      .eq('id', id)
     
     if (error) {
-      console.log('Error deleting client from Supabase, using mock data:', error.message)
+      console.log('⚠️ Error eliminando cliente de Supabase, usando datos mock:', error.message)
       
-      // Eliminar de datos mock
-      const clientIndex = mockClients.findIndex(client => client.id === id)
-      if (clientIndex !== -1) {
-        mockClients.splice(clientIndex, 1)
+      // Eliminar cliente mock
+      const mockIndex = mockClients.findIndex(client => client.id === id)
+      if (mockIndex !== -1) {
+        mockClients.splice(mockIndex, 1)
+        console.log('✅ Cliente eliminado de datos mock')
+        return
       }
       
-      return
+      throw new Error('Cliente no encontrado')
     }
+    
+    console.log('✅ Cliente eliminado de Supabase')
   } catch (error) {
-    console.error('Delete client error:', error)
+    console.error('❌ Error eliminando cliente:', error)
+    
+    // Eliminar cliente mock como fallback
+    const mockIndex = mockClients.findIndex(client => client.id === id)
+    if (mockIndex !== -1) {
+      mockClients.splice(mockIndex, 1)
+    }
+    
     throw error
   }
 }
 
 export async function getClientsByStatus(status: string): Promise<Client[]> {
   try {
+    console.log(`🔄 Intentando obtener clientes con status ${status} de Supabase...`)
+    
     const { data, error } = await supabase
       .from('clients')
       .select('*')
       .eq('status', status)
-      .order('createdAt', { ascending: false })
+      .order('created_at', { ascending: false })
     
     if (error) {
-      console.log('Error fetching clients by status from Supabase, using mock data:', error.message)
+      console.log('⚠️ Error obteniendo clientes por status de Supabase, usando datos mock:', error.message)
       return mockClients.filter(client => client.status === status)
     }
     
+    console.log(`✅ ${data?.length || 0} clientes con status ${status} obtenidos de Supabase`)
     return data || []
   } catch (error) {
-    console.error('Get clients by status error:', error)
+    console.error('❌ Error obteniendo clientes por status:', error)
     return mockClients.filter(client => client.status === status)
+  }
+}
+
+// Función para obtener estadísticas de clientes
+export async function getClientStats(): Promise<{
+  total: number
+  active: number
+  prospect: number
+  newLead: number
+  closedDeal: number
+}> {
+  try {
+    const clients = await getAllClients()
+    
+    return {
+      total: clients.length,
+      active: clients.filter(c => c.status === 'Active').length,
+      prospect: clients.filter(c => c.status === 'Prospect').length,
+      newLead: clients.filter(c => c.status === 'New Lead').length,
+      closedDeal: clients.filter(c => c.status === 'Closed Deal').length,
+    }
+  } catch (error) {
+    console.error('❌ Error obteniendo estadísticas de clientes:', error)
+    return {
+      total: 0,
+      active: 0,
+      prospect: 0,
+      newLead: 0,
+      closedDeal: 0,
+    }
   }
 }
