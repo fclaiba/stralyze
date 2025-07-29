@@ -1,32 +1,175 @@
 "use client"
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { loginUser } from '@/lib/data/users';
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import { z } from "zod"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { useToast } from "@/components/ui/use-toast"
+import { loginUser } from "@/lib/data/users"
+import { Eye, EyeOff, Loader2, Mail, Lock } from "lucide-react"
+
+const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
+})
+
+type LoginFormData = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const router = useRouter()
+  const { toast } = useToast()
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
+  const form = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  })
+
+  async function handleLogin(values: LoginFormData) {
+    setIsSubmitting(true)
     try {
-      const user = await loginUser(email, password);
-      document.cookie = `session=${user.id}; path=/`;
-      router.push('/admin/dashboard');
-    } catch {
-      setError('Invalid credentials');
+      const user = await loginUser(values.email, values.password)
+      document.cookie = `session=${user.id}; path=/`
+      
+      toast({
+        title: "Login successful",
+        description: `Welcome back, ${user.firstName}!`,
+      })
+      
+      router.push("/admin/dashboard")
+    } catch (error) {
+      console.error("Login error:", error)
+      toast({
+        title: "Login failed",
+        description: "Invalid email or password. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   return (
-    <form onSubmit={handleLogin} className="max-w-sm mx-auto mt-20 p-6 bg-white rounded shadow">
-      <h2 className="text-2xl font-bold mb-4">Admin Login</h2>
-      <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="mb-2 w-full p-2 border" />
-      <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="mb-2 w-full p-2 border" />
-      {error && <div className="text-red-500 mb-2">{error}</div>}
-      <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded">Login</button>
-    </form>
-  );
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 p-4">
+      <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm border-0 shadow-2xl">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center text-gray-900">
+            Welcome Back
+          </CardTitle>
+          <CardDescription className="text-center text-gray-600">
+            Sign in to your Stralyze account
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleLogin)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700">Email</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                        <Input
+                          type="email"
+                          placeholder="Enter your email"
+                          {...field}
+                          className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700">Password</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Enter your password"
+                          {...field}
+                          className="pl-10 pr-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4 text-gray-500" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-gray-500" />
+                          )}
+                        </Button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <Button
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  "Sign In"
+                )}
+              </Button>
+            </form>
+          </Form>
+
+          <div className="mt-6 space-y-4 text-center">
+            <Button
+              variant="link"
+              className="p-0 text-blue-600 hover:text-blue-700 font-semibold"
+              onClick={() => router.push("/admin/forgot-password")}
+            >
+              Forgot your password?
+            </Button>
+            
+            <div className="border-t border-gray-200 pt-4">
+              <p className="text-sm text-gray-600">
+                Don't have an account?{" "}
+                <Button
+                  variant="link"
+                  className="p-0 text-blue-600 hover:text-blue-700 font-semibold"
+                  onClick={() => router.push("/admin/register")}
+                >
+                  Create one here
+                </Button>
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
 }
