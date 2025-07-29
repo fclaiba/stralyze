@@ -23,8 +23,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = (userData: User) => {
     console.log("🔄 AuthProvider: Actualizando usuario en contexto...")
     console.log("👤 Usuario a establecer:", userData)
+    
+    // Asegurar que el estado se actualice correctamente
     setUser(userData)
-    console.log("✅ AuthProvider: Usuario establecido en contexto")
+    
+    // Verificar que el estado se actualizó
+    setTimeout(() => {
+      console.log("✅ AuthProvider: Usuario establecido en contexto")
+      console.log("🔄 AuthProvider: Estado actual del usuario:", userData)
+    }, 50)
   }
 
   const logout = async () => {

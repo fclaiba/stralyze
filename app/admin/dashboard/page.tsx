@@ -60,11 +60,16 @@ export default function AdminDashboard() {
 
   // Verificar autenticación
   useEffect(() => {
+    console.log("🔄 Dashboard: Verificando autenticación...")
+    console.log("🔄 Dashboard: Estado de loading:", loading)
+    console.log("🔄 Dashboard: Estado del usuario:", user)
+    
     if (!loading && !user) {
-      console.log("Usuario no autenticado, redirigiendo a login")
+      console.log("❌ Dashboard: Usuario no autenticado, redirigiendo a login")
       router.push('/admin/login')
     } else if (user) {
-      console.log("Usuario autenticado:", user)
+      console.log("✅ Dashboard: Usuario autenticado:", user)
+      console.log("✅ Dashboard: Acceso permitido al dashboard")
     }
   }, [user, loading, router])
 

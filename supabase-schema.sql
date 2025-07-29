@@ -11,29 +11,50 @@ create table users (
   created_at timestamp default now()
 );
 
--- CLIENTS
+-- CLIENTS (Actualizado para coincidir con la interfaz TypeScript)
 create table clients (
   id uuid primary key default gen_random_uuid(),
-  name text not null,
-  email text,
+  company text not null,
+  status text not null default 'New Lead',
+  industry text,
+  contact text not null,
+  email text not null unique,
   phone text,
-  company text,
-  created_at timestamp default now()
+  payment_method text,
+  contract_status text default 'Pending',
+  deposit decimal(10,2) default 0,
+  final_payment decimal(10,2) default 0,
+  total_amount decimal(10,2) default 0,
+  budget text,
+  created_at timestamp default now(),
+  updated_at timestamp default now()
 );
 
--- CASES
+-- CASES (Actualizado para coincidir con la interfaz TypeScript)
 create table cases (
   id uuid primary key default gen_random_uuid(),
   title text not null,
+  description text,
+  status text check (status in ('open', 'in_progress', 'completed', 'on_hold')) default 'open',
+  priority text check (priority in ('low', 'medium', 'high', 'urgent')) default 'medium',
   client_id uuid references clients(id),
-  status text,
-  priority text,
-  assigned_to uuid references users(id),
-  budget numeric,
+  assigned_to text,
+  budget numeric default 0,
   start_date date,
   due_date date,
-  description text,
   progress integer default 0,
+  created_at timestamp default now(),
+  updated_at timestamp default now()
+);
+
+-- ACTIVITIES (Para logging de acciones)
+create table activities (
+  id uuid primary key default gen_random_uuid(),
+  user_id text,
+  action text not null,
+  resource_type text not null,
+  resource_id text not null,
+  changes jsonb,
   created_at timestamp default now()
 );
 
@@ -146,11 +167,17 @@ create table form_leads (
 insert into users (email, password, name, role) values ('123@gmail.com', '123456', 'Admin', 'admin');
 
 -- ÍNDICES PARA OPTIMIZACIÓN
+create index idx_clients_status on clients(status);
+create index idx_clients_email on clients(email);
+create index idx_clients_created_at on clients(created_at);
 create index idx_cases_client_id on cases(client_id);
-create index idx_cases_assigned_to on cases(assigned_to);
+create index idx_cases_status on cases(status);
+create index idx_cases_priority on cases(priority);
+create index idx_cases_created_at on cases(created_at);
 create index idx_events_case_id on events(case_id);
 create index idx_notes_case_id on notes(case_id);
 create index idx_notifications_user_id on notifications(user_id);
 create index idx_settings_user_id on settings(user_id);
 create index idx_support_tickets_user_id on support_tickets(user_id);
-create index idx_form_leads_type on form_leads(type); 
+create index idx_form_leads_type on form_leads(type);
+create index idx_activities_resource on activities(resource_type, resource_id); 

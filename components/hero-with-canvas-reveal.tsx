@@ -9,14 +9,14 @@ export default function HeroWithCanvasReveal() {
     e.preventDefault()
     const featuresSection = document.getElementById("features")
     if (featuresSection) {
-      smoothScroll(featuresSection)
+      featuresSection.scrollIntoView({
+        behavior: "smooth",
+      })
     }
   }
 
   return (
     <div id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-transparent" />
-
       <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8">
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight mb-4">
           Strategic Marketing Solutions

@@ -62,9 +62,12 @@ export default function LoginPage() {
       const redirectTo = searchParams.get('redirectTo') || '/admin/dashboard'
       console.log("🎯 Redirigiendo a:", redirectTo)
       
-      // Usar window.location.href para redirección más robusta
-      console.log("🔄 Iniciando redirección con window.location.href...")
-      window.location.href = redirectTo
+      // Usar router.push con delay para sincronización
+      console.log("🔄 Iniciando redirección con router.push...")
+      setTimeout(() => {
+        console.log("🔄 Ejecutando redirección después de delay...")
+        router.push(redirectTo)
+      }, 100)
       
     } catch (error) {
       console.error("❌ Error en login:", error)
