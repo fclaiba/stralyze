@@ -66,28 +66,13 @@ export async function updateTemplate(id: string, formData: FormData) {
   }
 }
 
-export async function deleteTemplate(id: string) {
-  try {
-    await emailData.deleteEmailTemplate(id)
-    revalidatePath("/admin/email-marketing/templates")
-    return { success: true }
-  } catch (error) {
-    console.error("Error deleting template:", error)
-    return { success: false, error: "Failed to delete template" }
-  }
-}
-
 // Campaign actions
 const campaignSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  template_id: z.string().uuid("Invalid template ID"),
+  template_id: z.string().min(1, "Template is required"),
   segment: z.enum(["new_lead", "in_process", "closed_deal", "abandoned"]),
-  status: z.enum(["draft", "scheduled", "sending", "sent", "cancelled"]),
-  scheduled_at: z
-    .string()
-    .nullable()
-    .optional()
-    .transform((val) => (val && val.trim() !== "" ? val : null)),
+  status: z.enum(["draft", "scheduled"]),
+  scheduled_at: z.string().nullable().optional(),
 })
 
 export async function createCampaign(formData: FormData) {
@@ -95,39 +80,24 @@ export async function createCampaign(formData: FormData) {
     const name = formData.get("name") as string
     const template_id = formData.get("template_id") as string
     const segment = formData.get("segment") as "new_lead" | "in_process" | "closed_deal" | "abandoned"
-    const status = formData.get("status") as "draft" | "scheduled" | "sending" | "sent" | "cancelled"
-    const scheduled_at = formData.get("scheduled_at") as string | null
+    const status = formData.get("status") as "draft" | "scheduled"
+    const scheduled_at = formData.get("scheduled_at") as string
 
-    // Validate and transform the data
     const validatedData = campaignSchema.parse({
       name,
       template_id,
       segment,
       status,
-      scheduled_at,
+      scheduled_at: scheduled_at || null,
     })
 
-    // If status is not scheduled, ensure scheduled_at is null
-    const finalData = {
-      ...validatedData,
-      scheduled_at: validatedData.status !== "scheduled" ? null : validatedData.scheduled_at,
-      sent_at: null,
-    }
-
-    const campaign = await emailData.createEmailCampaign(finalData)
-
+    const campaign = await emailData.createEmailCampaign(validatedData)
     revalidatePath("/admin/email-marketing/campaigns")
     return { success: true, data: campaign }
   } catch (error) {
     console.error("Error creating campaign:", error)
     if (error instanceof z.ZodError) {
       return { success: false, error: error.errors }
-    }
-    // Check for database-specific errors
-    if (error instanceof Error) {
-      if (error.message.includes("invalid input syntax for type timestamp")) {
-        return { success: false, error: "Invalid date format. Please use a valid date and time." }
-      }
     }
     return { success: false, error: "Failed to create campaign" }
   }
@@ -138,25 +108,18 @@ export async function updateCampaign(id: string, formData: FormData) {
     const name = formData.get("name") as string
     const template_id = formData.get("template_id") as string
     const segment = formData.get("segment") as "new_lead" | "in_process" | "closed_deal" | "abandoned"
-    const status = formData.get("status") as "draft" | "scheduled" | "sending" | "sent" | "cancelled"
-    const scheduled_at = formData.get("scheduled_at") as string | null
+    const status = formData.get("status") as "draft" | "scheduled"
+    const scheduled_at = formData.get("scheduled_at") as string
 
-    // Validate and transform the data
     const validatedData = campaignSchema.parse({
       name,
       template_id,
       segment,
       status,
-      scheduled_at,
+      scheduled_at: scheduled_at || null,
     })
 
-    // If status is not scheduled, ensure scheduled_at is null
-    const finalData = {
-      ...validatedData,
-      scheduled_at: validatedData.status !== "scheduled" ? null : validatedData.scheduled_at,
-    }
-
-    const campaign = await emailData.updateEmailCampaign(id, finalData)
+    const campaign = await emailData.updateEmailCampaign(id, validatedData)
     revalidatePath("/admin/email-marketing/campaigns")
     return { success: true, data: campaign }
   } catch (error) {
@@ -164,52 +127,45 @@ export async function updateCampaign(id: string, formData: FormData) {
     if (error instanceof z.ZodError) {
       return { success: false, error: error.errors }
     }
-    // Check for database-specific errors
-    if (error instanceof Error) {
-      if (error.message.includes("invalid input syntax for type timestamp")) {
-        return { success: false, error: "Invalid date format. Please use a valid date and time." }
-      }
-    }
     return { success: false, error: "Failed to update campaign" }
   }
 }
 
-export async function deleteCampaign(id: string) {
-  try {
-    await emailData.deleteEmailCampaign(id)
-    revalidatePath("/admin/email-marketing/campaigns")
-    return { success: true }
-  } catch (error) {
-    console.error("Error deleting campaign:", error)
-    return { success: false, error: "Failed to delete campaign" }
-  }
-}
-
 // Send campaign action
-export async function sendCampaign(id: string) {
+export async function sendCampaign(campaignId: string) {
   try {
-    // Get the campaign
-    const campaign = await emailData.getEmailCampaign(id)
+    // Get campaign details
+    const campaign = await emailData.getEmailCampaign(campaignId)
     if (!campaign) {
       return { success: false, error: "Campaign not found" }
     }
 
-    // Get the template
-    const template = await emailData.getEmailTemplate(campaign.template_id)
-    if (!template) {
-      return { success: false, error: "Template not found" }
+    if (campaign.status !== "draft") {
+      return { success: false, error: "Only draft campaigns can be sent" }
     }
 
-    // Update campaign status to sent
-    await emailData.updateEmailCampaign(id, {
-      status: "sent",
-      sent_at: new Date().toISOString(),
+    // Update campaign status to sending
+    await emailData.updateEmailCampaign(campaignId, {
+      status: "sending"
     })
 
-    // In a real implementation, you would send emails here
-    // For now, we'll just simulate success
-    console.log(`Simulating sending campaign "${campaign.name}" to segment "${campaign.segment}"`)
+    // Simulate email sending process
+    // In a real implementation, this would:
+    // 1. Get recipients based on segment
+    // 2. Send emails through email service (SendGrid, Mailgun, etc.)
+    // 3. Track delivery, opens, clicks
+    // 4. Update campaign status to sent
 
+    // For now, we'll simulate the process
+    await new Promise(resolve => setTimeout(resolve, 2000)) // Simulate sending time
+
+    // Update campaign status to sent
+    await emailData.updateEmailCampaign(campaignId, {
+      status: "sent",
+      sent_at: new Date().toISOString()
+    })
+
+    revalidatePath("/admin/email-marketing/campaigns")
     return { success: true, message: "Campaign sent successfully" }
   } catch (error) {
     console.error("Error sending campaign:", error)
@@ -217,13 +173,33 @@ export async function sendCampaign(id: string) {
   }
 }
 
-// Unsubscribe action
-export async function unsubscribeFromEmails(clientId: string) {
+// Email tracking actions
+export async function trackEmailOpen(campaignId: string, recipientEmail: string) {
   try {
-    await emailData.unsubscribeClient(clientId)
+    await updateTrackingStatus(campaignId, recipientEmail, "opened")
     return { success: true }
   } catch (error) {
-    console.error("Error unsubscribing client:", error)
+    console.error("Error tracking email open:", error)
+    return { success: false, error: "Failed to track email open" }
+  }
+}
+
+export async function trackEmailClick(campaignId: string, recipientEmail: string) {
+  try {
+    await updateTrackingStatus(campaignId, recipientEmail, "clicked")
+    return { success: true }
+  } catch (error) {
+    console.error("Error tracking email click:", error)
+    return { success: false, error: "Failed to track email click" }
+  }
+}
+
+export async function unsubscribeEmail(campaignId: string, recipientEmail: string) {
+  try {
+    await updateTrackingStatus(campaignId, recipientEmail, "unsubscribed")
+    return { success: true }
+  } catch (error) {
+    console.error("Error unsubscribing email:", error)
     return { success: false, error: "Failed to unsubscribe" }
   }
 }

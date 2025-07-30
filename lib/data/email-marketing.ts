@@ -1,6 +1,7 @@
-import type { EmailCampaign, EmailTemplate } from "@/types/email-marketing"
+import type { EmailCampaign, EmailTemplate, EmailTracking } from "@/types/email-marketing"
+import { createClient } from "@/lib/supabase/server"
 
-// Add EmailAnalytics type locally since it's not in the main types file
+// Tipos locales para analytics
 type EmailAnalytics = {
   id: string
   campaignId: string
@@ -12,420 +13,544 @@ type EmailAnalytics = {
   unsubscribes: number
 }
 
-// Mock data for development
-const mockCampaigns: EmailCampaign[] = [
-  {
-    id: "camp_001",
-    name: "Welcome New Leads",
-    template_id: "template_001",
-    segment: "new_lead",
-    status: "sent",
-    scheduled_at: "2024-02-15T10:00:00Z",
-    sent_at: "2024-02-15T10:00:00Z",
-    created_at: "2024-02-14T15:30:00Z",
-    updated_at: "2024-02-15T10:00:00Z",
-    stats: {
-      total: 1250,
-      sent: 1250,
-      delivered: 1200,
-      opened: 850,
-      clicked: 150,
-      bounced: 25,
-      unsubscribed: 5,
-      conversions: 100,
-    },
-  },
-  {
-    id: "camp_002",
-    name: "Follow-up In Process",
-    template_id: "template_002",
-    segment: "in_process",
-    status: "scheduled",
-    scheduled_at: "2024-02-20T14:00:00Z",
-    sent_at: null,
-    created_at: "2024-02-16T09:15:00Z",
-    updated_at: "2024-02-16T09:15:00Z",
-    stats: {
-      total: 450,
-      sent: 0,
-      delivered: 0,
-      opened: 0,
-      clicked: 0,
-      bounced: 0,
-      unsubscribed: 0,
-      conversions: 0,
-    },
-  },
-  {
-    id: "camp_003",
-    name: "Closed Deal Celebration",
-    template_id: "template_003",
-    segment: "closed_deal",
-    status: "draft",
-    scheduled_at: null,
-    sent_at: null,
-    created_at: "2024-02-17T11:20:00Z",
-    updated_at: "2024-02-17T11:20:00Z",
-    stats: {
-      total: 280,
-      sent: 0,
-      delivered: 0,
-      opened: 0,
-      clicked: 0,
-      bounced: 0,
-      unsubscribed: 0,
-      conversions: 0,
-    },
-  },
-  {
-    id: "camp_004",
-    name: "Re-engagement Abandoned",
-    template_id: "template_001",
-    segment: "abandoned",
-    status: "draft",
-    scheduled_at: null,
-    sent_at: null,
-    created_at: "2024-02-18T16:45:00Z",
-    updated_at: "2024-02-18T16:45:00Z",
-    stats: {
-      total: 200,
-      sent: 0,
-      delivered: 0,
-      opened: 0,
-      clicked: 0,
-      bounced: 0,
-      unsubscribed: 0,
-      conversions: 0,
-    },
-  },
-]
-
-const mockTemplates: EmailTemplate[] = [
-  {
-    id: "template_001",
-    name: "Welcome Template",
-    subject: "Welcome to {{company_name}}",
-    content: "<h1>Welcome {{first_name}}!</h1><p>We're excited to have you on board.</p>",
-    segment: "new_lead",
-    created_at: "2024-02-10T10:00:00Z",
-    updated_at: "2024-02-10T10:00:00Z",
-  },
-  {
-    id: "template_002",
-    name: "Follow-up Template",
-    subject: "Following up on {{topic}}",
-    content: "<h2>Hi {{first_name}},</h2><p>Just checking in on {{topic}}.</p>",
-    segment: "in_process",
-    created_at: "2024-02-11T14:30:00Z",
-    updated_at: "2024-02-11T14:30:00Z",
-  },
-  {
-    id: "template_003",
-    name: "Promotional Template",
-    subject: "Special Offer: {{offer_title}}",
-    content: "<h1>Special Offer!</h1><p>{{offer_description}}</p><a href='{{cta_link}}'>Learn More</a>",
-    segment: "closed_deal",
-    created_at: "2024-02-12T09:15:00Z",
-    updated_at: "2024-02-12T09:15:00Z",
-  },
-]
-
-const mockAnalytics: EmailAnalytics[] = [
-  {
-    id: "analytics_001",
-    campaignId: "camp_001",
-    date: "2024-02-15",
-    opens: 850,
-    clicks: 150,
-    conversions: 100,
-    bounces: 25,
-    unsubscribes: 5,
-  },
-  {
-    id: "analytics_002",
-    campaignId: "camp_001",
-    date: "2024-02-16",
-    opens: 120,
-    clicks: 18,
-    conversions: 12,
-    bounces: 2,
-    unsubscribes: 1,
-  },
-]
-
 /**
  * Get all email campaigns
  */
 export async function getEmailCampaigns(): Promise<EmailCampaign[]> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500))
-  return mockCampaigns
+  try {
+    const supabase = createClient()
+    
+    const { data: campaigns, error } = await supabase
+      .from('email_campaigns')
+      .select(`
+        *,
+        template:email_templates(*)
+      `)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching campaigns:', error)
+      throw new Error(error.message)
+    }
+
+    // Transform data to match EmailCampaign type
+    return campaigns?.map(campaign => ({
+      id: campaign.id,
+      name: campaign.name,
+      template_id: campaign.template_id,
+      segment: campaign.segment,
+      status: campaign.status,
+      scheduled_at: campaign.scheduled_at,
+      sent_at: campaign.sent_at,
+      created_at: campaign.created_at,
+      updated_at: campaign.updated_at,
+      template: campaign.template ? {
+        id: campaign.template.id,
+        name: campaign.template.name,
+        subject: campaign.template.subject,
+        content: campaign.template.content,
+        segment: campaign.template.segment,
+        created_at: campaign.template.created_at,
+        updated_at: campaign.template.updated_at
+      } : undefined,
+      stats: {
+        total: 0, // Will be calculated from tracking data
+        sent: 0,
+        delivered: 0,
+        opened: 0,
+        clicked: 0,
+        bounced: 0,
+        unsubscribed: 0,
+        conversions: 0
+      }
+    })) || []
+  } catch (error) {
+    console.error('Error in getEmailCampaigns:', error)
+    throw error
+  }
 }
 
 /**
  * Get a single email campaign by ID
  */
 export async function getEmailCampaign(id: string): Promise<EmailCampaign | null> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 300))
-  return mockCampaigns.find(campaign => campaign.id === id) || null
+  try {
+    const supabase = createClient()
+    
+    const { data: campaign, error } = await supabase
+      .from('email_campaigns')
+      .select(`
+        *,
+        template:email_templates(*)
+      `)
+      .eq('id', id)
+      .single()
+
+    if (error) {
+      console.error('Error fetching campaign:', error)
+      throw new Error(error.message)
+    }
+
+    if (!campaign) return null
+
+    // Transform data to match EmailCampaign type
+    return {
+      id: campaign.id,
+      name: campaign.name,
+      template_id: campaign.template_id,
+      segment: campaign.segment,
+      status: campaign.status,
+      scheduled_at: campaign.scheduled_at,
+      sent_at: campaign.sent_at,
+      created_at: campaign.created_at,
+      updated_at: campaign.updated_at,
+      template: campaign.template ? {
+        id: campaign.template.id,
+        name: campaign.template.name,
+        subject: campaign.template.subject,
+        content: campaign.template.content,
+        segment: campaign.template.segment,
+        created_at: campaign.template.created_at,
+        updated_at: campaign.template.updated_at
+      } : undefined,
+      stats: {
+        total: 0,
+        sent: 0,
+        delivered: 0,
+        opened: 0,
+        clicked: 0,
+        bounced: 0,
+        unsubscribed: 0,
+        conversions: 0
+      }
+    }
+  } catch (error) {
+    console.error('Error in getEmailCampaign:', error)
+    throw error
+  }
 }
 
 /**
  * Create a new email campaign
  */
-export async function createEmailCampaign(campaign: Omit<EmailCampaign, "id" | "created_at" | "updated_at">): Promise<EmailCampaign> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 800))
-  
-  const newCampaign: EmailCampaign = {
-    ...campaign,
-    id: `camp_${Date.now()}`,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+export async function createEmailCampaign(campaignData: {
+  name: string
+  template_id: string
+  segment: string
+  status?: string
+  scheduled_at?: string | null
+}): Promise<EmailCampaign> {
+  try {
+    const supabase = createClient()
+    
+    const { data: campaign, error } = await supabase
+      .from('email_campaigns')
+      .insert({
+        name: campaignData.name,
+        template_id: campaignData.template_id,
+        segment: campaignData.segment,
+        status: campaignData.status || 'draft',
+        scheduled_at: campaignData.scheduled_at
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating campaign:', error)
+      throw new Error(error.message)
+    }
+
+    return {
+      id: campaign.id,
+      name: campaign.name,
+      template_id: campaign.template_id,
+      segment: campaign.segment,
+      status: campaign.status,
+      scheduled_at: campaign.scheduled_at,
+      sent_at: campaign.sent_at,
+      created_at: campaign.created_at,
+      updated_at: campaign.updated_at,
+      stats: {
+        total: 0,
+        sent: 0,
+        delivered: 0,
+        opened: 0,
+        clicked: 0,
+        bounced: 0,
+        unsubscribed: 0,
+        conversions: 0
+      }
+    }
+  } catch (error) {
+    console.error('Error in createEmailCampaign:', error)
+    throw error
   }
-  
-  mockCampaigns.push(newCampaign)
-  return newCampaign
 }
 
 /**
  * Update an email campaign
  */
-export async function updateEmailCampaign(id: string, updates: Partial<EmailCampaign>): Promise<EmailCampaign | null> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 600))
-  
-  const index = mockCampaigns.findIndex(campaign => campaign.id === id)
-  if (index === -1) return null
-  
-  mockCampaigns[index] = {
-    ...mockCampaigns[index],
-    ...updates,
-    updated_at: new Date().toISOString(),
+export async function updateEmailCampaign(id: string, campaignData: {
+  name?: string
+  template_id?: string
+  segment?: string
+  status?: string
+  scheduled_at?: string | null
+}): Promise<EmailCampaign> {
+  try {
+    const supabase = createClient()
+    
+    const { data: campaign, error } = await supabase
+      .from('email_campaigns')
+      .update({
+        ...campaignData,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error updating campaign:', error)
+      throw new Error(error.message)
+    }
+
+    return {
+      id: campaign.id,
+      name: campaign.name,
+      template_id: campaign.template_id,
+      segment: campaign.segment,
+      status: campaign.status,
+      scheduled_at: campaign.scheduled_at,
+      sent_at: campaign.sent_at,
+      created_at: campaign.created_at,
+      updated_at: campaign.updated_at,
+      stats: {
+        total: 0,
+        sent: 0,
+        delivered: 0,
+        opened: 0,
+        clicked: 0,
+        bounced: 0,
+        unsubscribed: 0,
+        conversions: 0
+      }
+    }
+  } catch (error) {
+    console.error('Error in updateEmailCampaign:', error)
+    throw error
   }
-  
-  return mockCampaigns[index]
 }
 
 /**
  * Delete an email campaign
  */
-export async function deleteEmailCampaign(id: string): Promise<boolean> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 400))
-  
-  const index = mockCampaigns.findIndex(campaign => campaign.id === id)
-  if (index === -1) return false
-  
-  mockCampaigns.splice(index, 1)
-  return true
+export async function deleteEmailCampaign(id: string): Promise<void> {
+  try {
+    const supabase = createClient()
+    
+    const { error } = await supabase
+      .from('email_campaigns')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('Error deleting campaign:', error)
+      throw new Error(error.message)
+    }
+  } catch (error) {
+    console.error('Error in deleteEmailCampaign:', error)
+    throw error
+  }
 }
 
 /**
  * Get all email templates
  */
 export async function getEmailTemplates(): Promise<EmailTemplate[]> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 300))
-  return mockTemplates
-}
+  try {
+    const supabase = createClient()
+    
+    const { data: templates, error } = await supabase
+      .from('email_templates')
+      .select('*')
+      .order('created_at', { ascending: false })
 
-/**
- * Get a single email template by ID
- */
-export async function getEmailTemplate(id: string): Promise<EmailTemplate | null> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 200))
-  return mockTemplates.find(template => template.id === id) || null
-}
+    if (error) {
+      console.error('Error fetching templates:', error)
+      throw new Error(error.message)
+    }
 
-/**
- * Create a new email template
- */
-export async function createEmailTemplate(template: Omit<EmailTemplate, "id" | "created_at" | "updated_at">): Promise<EmailTemplate> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 600))
-  
-  const newTemplate: EmailTemplate = {
-    ...template,
-    id: `template_${Date.now()}`,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    return templates?.map(template => ({
+      id: template.id,
+      name: template.name,
+      subject: template.subject,
+      content: template.content,
+      segment: template.segment,
+      created_at: template.created_at,
+      updated_at: template.updated_at
+    })) || []
+  } catch (error) {
+    console.error('Error in getEmailTemplates:', error)
+    throw error
   }
-  
-  mockTemplates.push(newTemplate)
-  return newTemplate
-}
-
-/**
- * Update an email template
- */
-export async function updateEmailTemplate(id: string, updates: Partial<EmailTemplate>): Promise<EmailTemplate | null> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500))
-  
-  const index = mockTemplates.findIndex(template => template.id === id)
-  if (index === -1) return null
-  
-  mockTemplates[index] = {
-    ...mockTemplates[index],
-    ...updates,
-    updated_at: new Date().toISOString(),
-  }
-  
-  return mockTemplates[index]
-}
-
-/**
- * Delete an email template
- */
-export async function deleteEmailTemplate(id: string): Promise<boolean> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 300))
-  
-  const index = mockTemplates.findIndex(template => template.id === id)
-  if (index === -1) return false
-  
-  mockTemplates.splice(index, 1)
-  return true
-}
-
-/**
- * Get analytics for a specific campaign
- */
-export async function getCampaignAnalytics(campaignId: string): Promise<EmailAnalytics[]> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 400))
-  return mockAnalytics.filter(analytics => analytics.campaignId === campaignId)
-}
-
-/**
- * Get overall email marketing analytics
- */
-export async function getEmailMarketingAnalytics(): Promise<{
-  totalCampaigns: number
-  totalSent: number
-  totalOpens: number
-  totalClicks: number
-  totalConversions: number
-  averageOpenRate: number
-  averageClickRate: number
-  averageConversionRate: number
-}> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 600))
-  
-  const totalCampaigns = mockCampaigns.length
-  const totalSent = mockCampaigns.reduce((sum, campaign) => sum + (campaign.stats?.sent || 0), 0)
-  const totalOpens = mockCampaigns.reduce((sum, campaign) => sum + (campaign.stats?.opened || 0), 0)
-  const totalClicks = mockCampaigns.reduce((sum, campaign) => sum + (campaign.stats?.clicked || 0), 0)
-  const totalConversions = mockCampaigns.reduce((sum, campaign) => sum + (campaign.stats?.conversions || 0), 0)
-  
-  const averageOpenRate = totalSent > 0 ? (totalOpens / totalSent) * 100 : 0
-  const averageClickRate = totalSent > 0 ? (totalClicks / totalSent) * 100 : 0
-  const averageConversionRate = totalClicks > 0 ? (totalConversions / totalClicks) * 100 : 0
-  
-  return {
-    totalCampaigns,
-    totalSent,
-    totalOpens,
-    totalClicks,
-    totalConversions,
-    averageOpenRate: Math.round(averageOpenRate * 100) / 100,
-    averageClickRate: Math.round(averageClickRate * 100) / 100,
-    averageConversionRate: Math.round(averageConversionRate * 100) / 100,
-  }
-}
-
-/**
- * Unsubscribe a client from email marketing
- */
-export async function unsubscribeClient(clientId: string): Promise<boolean> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 300))
-  // In a real implementation, this would update the client's subscription status
-  return true
 }
 
 /**
  * Get email templates by segment
  */
-export async function getEmailTemplatesBySegment(segmentId: string): Promise<EmailTemplate[]> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 300))
-  return mockTemplates.filter(template => template.segment === segmentId)
-}
+export async function getEmailTemplatesBySegment(segment: string): Promise<EmailTemplate[]> {
+  try {
+    const supabase = createClient()
+    
+    const { data: templates, error } = await supabase
+      .from('email_templates')
+      .select('*')
+      .eq('segment', segment)
+      .order('created_at', { ascending: false })
 
-/**
- * Get campaign tracking data
- */
-export async function getCampaignTracking(campaignId: string): Promise<{
-  opens: number
-  clicks: number
-  conversions: number
-  bounces: number
-  unsubscribes: number
-}> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 300))
-  
-  const campaign = mockCampaigns.find(c => c.id === campaignId)
-  if (!campaign || !campaign.stats) {
-    return {
-      opens: 0,
-      clicks: 0,
-      conversions: 0,
-      bounces: 0,
-      unsubscribes: 0,
+    if (error) {
+      console.error('Error fetching templates by segment:', error)
+      throw new Error(error.message)
     }
-  }
-  
-  return {
-    opens: campaign.stats.opened,
-    clicks: campaign.stats.clicked,
-    conversions: campaign.stats.conversions || 0,
-    bounces: campaign.stats.bounced,
-    unsubscribes: campaign.stats.unsubscribed,
+
+    return templates?.map(template => ({
+      id: template.id,
+      name: template.name,
+      subject: template.subject,
+      content: template.content,
+      segment: template.segment,
+      created_at: template.created_at,
+      updated_at: template.updated_at
+    })) || []
+  } catch (error) {
+    console.error('Error in getEmailTemplatesBySegment:', error)
+    throw error
   }
 }
 
 /**
- * Update email tracking data
+ * Create a new email template
  */
-export async function updateEmailTracking(campaignId: string, trackingData: {
-  opens?: number
-  clicks?: number
-  conversions?: number
-  bounces?: number
-  unsubscribes?: number
-}): Promise<boolean> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 400))
-  
-  const campaign = mockCampaigns.find(c => c.id === campaignId)
-  if (!campaign || !campaign.stats) {
-    return false
+export async function createEmailTemplate(templateData: {
+  name: string
+  subject: string
+  content: string
+  segment: string
+}): Promise<EmailTemplate> {
+  try {
+    const supabase = createClient()
+    
+    const { data: template, error } = await supabase
+      .from('email_templates')
+      .insert(templateData)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating template:', error)
+      throw new Error(error.message)
+    }
+
+    return {
+      id: template.id,
+      name: template.name,
+      subject: template.subject,
+      content: template.content,
+      segment: template.segment,
+      created_at: template.created_at,
+      updated_at: template.updated_at
+    }
+  } catch (error) {
+    console.error('Error in createEmailTemplate:', error)
+    throw error
   }
-  
-  // Update the campaign stats
-  campaign.stats = {
-    ...campaign.stats,
-    ...trackingData,
-  }
-  
-  return true
 }
 
 /**
- * Create email click record
+ * Update an email template
  */
-export async function createEmailClick(campaignId: string, clientId: string, linkUrl: string): Promise<boolean> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 300))
-  
-  // In a real implementation, this would create a click record in the database
-  console.log(`Email click recorded: Campaign ${campaignId}, Client ${clientId}, URL ${linkUrl}`)
-  
-  return true
+export async function updateEmailTemplate(id: string, templateData: {
+  name?: string
+  subject?: string
+  content?: string
+  segment?: string
+}): Promise<EmailTemplate> {
+  try {
+    const supabase = createClient()
+    
+    const { data: template, error } = await supabase
+      .from('email_templates')
+      .update({
+        ...templateData,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error updating template:', error)
+      throw new Error(error.message)
+    }
+
+    return {
+      id: template.id,
+      name: template.name,
+      subject: template.subject,
+      content: template.content,
+      segment: template.segment,
+      created_at: template.created_at,
+      updated_at: template.updated_at
+    }
+  } catch (error) {
+    console.error('Error in updateEmailTemplate:', error)
+    throw error
+  }
+}
+
+/**
+ * Delete an email template
+ */
+export async function deleteEmailTemplate(id: string): Promise<void> {
+  try {
+    const supabase = createClient()
+    
+    // Check if template is being used by any campaigns
+    const { data: campaigns, error: campaignsError } = await supabase
+      .from('email_campaigns')
+      .select('id, name')
+      .eq('template_id', id)
+
+    if (campaignsError) {
+      console.error('Error checking template usage:', campaignsError)
+      throw new Error(campaignsError.message)
+    }
+
+    if (campaigns && campaigns.length > 0) {
+      const campaignNames = campaigns.map(c => c.name).join(', ')
+      throw new Error(`Cannot delete template. It is being used by the following campaigns: ${campaignNames}`)
+    }
+
+    const { error } = await supabase
+      .from('email_templates')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('Error deleting template:', error)
+      throw new Error(error.message)
+    }
+  } catch (error) {
+    console.error('Error in deleteEmailTemplate:', error)
+    throw error
+  }
+}
+
+/**
+ * Get email tracking data for a campaign
+ */
+export async function getEmailTracking(campaignId: string): Promise<EmailTracking[]> {
+  try {
+    const supabase = createClient()
+    
+    const { data: tracking, error } = await supabase
+      .from('email_tracking')
+      .select('*')
+      .eq('campaign_id', campaignId)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching tracking data:', error)
+      throw new Error(error.message)
+    }
+
+    return tracking?.map(track => ({
+      id: track.id,
+      campaign_id: track.campaign_id,
+      recipient_email: track.recipient_email,
+      opened: track.opened,
+      clicked: track.clicked,
+      bounced: track.bounced,
+      unsubscribed: track.unsubscribed,
+      opened_at: track.opened_at,
+      clicked_at: track.clicked_at,
+      bounced_at: track.bounced_at,
+      unsubscribed_at: track.unsubscribed_at,
+      created_at: track.created_at
+    })) || []
+  } catch (error) {
+    console.error('Error in getEmailTracking:', error)
+    throw error
+  }
+}
+
+/**
+ * Update tracking status for an email
+ */
+export async function updateTrackingStatus(
+  campaignId: string,
+  recipientEmail: string,
+  status: 'opened' | 'clicked' | 'bounced' | 'unsubscribed'
+): Promise<void> {
+  try {
+    const supabase = createClient()
+    
+    const updateData: any = {
+      [status]: true,
+      [`${status}_at`]: new Date().toISOString()
+    }
+
+    const { error } = await supabase
+      .from('email_tracking')
+      .update(updateData)
+      .eq('campaign_id', campaignId)
+      .eq('recipient_email', recipientEmail)
+
+    if (error) {
+      console.error('Error updating tracking status:', error)
+      throw new Error(error.message)
+    }
+  } catch (error) {
+    console.error('Error in updateTrackingStatus:', error)
+    throw error
+  }
+}
+
+/**
+ * Get analytics data for campaigns
+ */
+export async function getEmailAnalytics(timeRange: '7days' | '30days' | '90days' = '30days'): Promise<EmailAnalytics[]> {
+  try {
+    const supabase = createClient()
+    
+    const startDate = new Date()
+    const days = timeRange === '7days' ? 7 : timeRange === '30days' ? 30 : 90
+    startDate.setDate(startDate.getDate() - days)
+
+    const { data: analytics, error } = await supabase
+      .from('email_analytics')
+      .select('*')
+      .gte('date', startDate.toISOString().split('T')[0])
+      .order('date', { ascending: true })
+
+    if (error) {
+      console.error('Error fetching analytics:', error)
+      throw new Error(error.message)
+    }
+
+    return analytics?.map(analytic => ({
+      id: analytic.id,
+      campaignId: analytic.campaign_id,
+      date: analytic.date,
+      opens: analytic.total_opened,
+      clicks: analytic.total_clicked,
+      conversions: analytic.total_conversions,
+      bounces: analytic.total_bounced,
+      unsubscribes: analytic.total_unsubscribed
+    })) || []
+  } catch (error) {
+    console.error('Error in getEmailAnalytics:', error)
+    throw error
+  }
 }

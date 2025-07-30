@@ -1,163 +1,130 @@
 "use server"
 
-import { createServiceClient } from "@/lib/supabase/server"
 import * as emailData from "@/lib/data/email-marketing"
 import type { EmailTracking } from "@/types/email-marketing"
 
 /**
- * Server action to fetch tracking data for a campaign
+ * Server action to fetch campaign tracking data
  */
 export async function fetchCampaignTracking(campaignId: string): Promise<{
   success: boolean
-  data?: {
-    opens: number
-    clicks: number
-    conversions: number
-    bounces: number
-    unsubscribes: number
-  }
+  data?: EmailTracking[]
   error?: string
 }> {
   try {
-    const trackingData = await emailData.getCampaignTracking(campaignId)
-    return { success: true, data: trackingData }
+    const tracking = await emailData.getEmailTracking(campaignId)
+    return { success: true, data: tracking }
   } catch (error) {
     console.error("Error fetching campaign tracking:", error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to fetch campaign tracking data",
+      error: error instanceof Error ? error.message : "Failed to fetch campaign tracking",
     }
   }
 }
 
 /**
- * Updates the status of an email tracking record by tracking_id
- * This function handles finding the record by tracking_id and updating it
+ * Server action to update tracking status
  */
 export async function updateTrackingStatus(
-  trackingId: string,
-  status: string,
-  additionalData: Record<string, any> = {},
-) {
+  campaignId: string,
+  recipientEmail: string,
+  status: 'opened' | 'clicked' | 'bounced' | 'unsubscribed'
+): Promise<{ success: boolean; error?: string }> {
   try {
-    // Find the tracking record by tracking_id
-    const supabase = createServiceClient()
-    const { data: trackingRecords, error: findError } = await supabase
-      .from("email_tracking")
-      .select("id")
-      .eq("tracking_id", trackingId)
-
-    if (findError) {
-      console.error("Error finding tracking record:", findError)
-      throw new Error(findError.message)
-    }
-
-    if (!trackingRecords || trackingRecords.length === 0) {
-      throw new Error(`Tracking record with tracking_id ${trackingId} not found`)
-    }
-
-    // If multiple records found (shouldn't happen but let's handle it)
-    if (trackingRecords.length > 1) {
-      console.warn(`Multiple tracking records found with tracking_id ${trackingId}. Updating the first one.`)
-    }
-
-    const recordId = trackingRecords[0].id
-
-    // Now update the record using the internal ID
-    const updateData: Record<string, any> = {
-      status,
-      ...additionalData,
-    }
-
-    // Add timestamp based on status
-    switch (status) {
-      case "sent":
-        updateData.sent_at = new Date().toISOString()
-        break
-      case "delivered":
-        updateData.delivered_at = new Date().toISOString()
-        break
-      case "opened":
-        updateData.opened_at = new Date().toISOString()
-        break
-      case "clicked":
-        updateData.clicked_at = new Date().toISOString()
-        break
-    }
-
-    // Update the record
-    await emailData.updateEmailTracking(recordId, updateData)
+    await emailData.updateTrackingStatus(campaignId, recipientEmail, status)
     return { success: true }
   } catch (error) {
-    console.error(`Error updating tracking status to ${status}:`, error)
-    throw error
+    console.error("Error updating tracking status:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update tracking status",
+    }
   }
 }
 
 /**
- * Records an email open event
+ * Server action to get tracking statistics for a campaign
  */
-export async function recordEmailOpen(trackingId: string) {
-  try {
-    await updateTrackingStatus(trackingId, "opened")
-    return { success: true }
-  } catch (error) {
-    console.error("Error recording email open:", error)
-    return { success: false, error: "Failed to record email open" }
-  }
-}
-
-/**
- * Records an email click event
- */
-export async function recordEmailClick(trackingId: string, url: string) {
-  try {
-    // Find the tracking record by tracking_id
-    const supabase = createServiceClient()
-    const { data: trackingRecords, error: findError } = await supabase
-      .from("email_tracking")
-      .select("id")
-      .eq("tracking_id", trackingId)
-
-    if (findError) {
-      console.error("Error finding tracking record:", findError)
-      throw new Error(findError.message)
-    }
-
-    if (!trackingRecords || trackingRecords.length === 0) {
-      throw new Error(`Tracking record with tracking_id ${trackingId} not found`)
-    }
-
-    const recordId = trackingRecords[0].id
-
-    // Update the tracking record
-    await updateTrackingStatus(trackingId, "clicked")
-
-    // Record the click
-    await emailData.createEmailClick(recordId, trackingId, url)
-
-    return { success: true }
-  } catch (error) {
-    console.error("Error recording email click:", error)
-    return { success: false, error: "Failed to record email click" }
-  }
-}
-
-export async function getCampaignTracking(campaignId: string): Promise<{
+export async function getCampaignTrackingStats(campaignId: string): Promise<{
   success: boolean
   data?: {
-    opens: number
-    clicks: number
-    conversions: number
-    bounces: number
-    unsubscribes: number
+    totalRecipients: number
+    totalOpened: number
+    totalClicked: number
+    totalBounced: number
+    totalUnsubscribed: number
+    openRate: number
+    clickRate: number
+    bounceRate: number
+    unsubscribeRate: number
   }
   error?: string
 }> {
   try {
-    const trackingData = await emailData.getCampaignTracking(campaignId)
-    return { success: true, data: trackingData }
+    const tracking = await emailData.getEmailTracking(campaignId)
+    
+    const totalRecipients = tracking.length
+    const totalOpened = tracking.filter(t => t.opened).length
+    const totalClicked = tracking.filter(t => t.clicked).length
+    const totalBounced = tracking.filter(t => t.bounced).length
+    const totalUnsubscribed = tracking.filter(t => t.unsubscribed).length
+    
+    const openRate = totalRecipients > 0 ? (totalOpened / totalRecipients) * 100 : 0
+    const clickRate = totalRecipients > 0 ? (totalClicked / totalRecipients) * 100 : 0
+    const bounceRate = totalRecipients > 0 ? (totalBounced / totalRecipients) * 100 : 0
+    const unsubscribeRate = totalRecipients > 0 ? (totalUnsubscribed / totalRecipients) * 100 : 0
+    
+    return {
+      success: true,
+      data: {
+        totalRecipients,
+        totalOpened,
+        totalClicked,
+        totalBounced,
+        totalUnsubscribed,
+        openRate: Math.round(openRate * 100) / 100,
+        clickRate: Math.round(clickRate * 100) / 100,
+        bounceRate: Math.round(bounceRate * 100) / 100,
+        unsubscribeRate: Math.round(unsubscribeRate * 100) / 100,
+      }
+    }
   } catch (error) {
-    return { success: false, error: "Failed to get campaign tracking" }
+    console.error("Error getting campaign tracking stats:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get campaign tracking stats",
+    }
+  }
+}
+
+/**
+ * Server action to get tracking data by date range
+ */
+export async function getTrackingByDateRange(
+  campaignId: string,
+  startDate: string,
+  endDate: string
+): Promise<{
+  success: boolean
+  data?: EmailTracking[]
+  error?: string
+}> {
+  try {
+    const tracking = await emailData.getEmailTracking(campaignId)
+    
+    // Filter by date range
+    const filteredTracking = tracking.filter(track => {
+      const trackDate = new Date(track.created_at).toISOString().split('T')[0]
+      return trackDate >= startDate && trackDate <= endDate
+    })
+    
+    return { success: true, data: filteredTracking }
+  } catch (error) {
+    console.error("Error getting tracking by date range:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get tracking by date range",
+    }
   }
 }

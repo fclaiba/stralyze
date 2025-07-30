@@ -104,22 +104,59 @@ create table event_attendees (
   primary key (event_id, user_id)
 );
 
--- TEMPLATES
-create table templates (
+-- EMAIL TEMPLATES (Específico para email marketing)
+create table email_templates (
   id uuid primary key default gen_random_uuid(),
   name text not null,
-  subject text,
-  body text,
+  subject text not null,
+  content text not null,
+  segment text check (segment in ('new_lead', 'in_process', 'closed_deal', 'abandoned')) not null,
+  created_at timestamp default now(),
+  updated_at timestamp default now()
+);
+
+-- EMAIL CAMPAIGNS (Específico para email marketing)
+create table email_campaigns (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  template_id uuid references email_templates(id) on delete cascade,
+  segment text check (segment in ('new_lead', 'in_process', 'closed_deal', 'abandoned')) not null,
+  status text check (status in ('draft', 'scheduled', 'sending', 'sent', 'cancelled')) default 'draft',
+  scheduled_at timestamp,
+  sent_at timestamp,
+  created_at timestamp default now(),
+  updated_at timestamp default now()
+);
+
+-- EMAIL TRACKING (Para analytics de campañas)
+create table email_tracking (
+  id uuid primary key default gen_random_uuid(),
+  campaign_id uuid references email_campaigns(id) on delete cascade,
+  recipient_email text not null,
+  opened boolean default false,
+  clicked boolean default false,
+  bounced boolean default false,
+  unsubscribed boolean default false,
+  opened_at timestamp,
+  clicked_at timestamp,
+  bounced_at timestamp,
+  unsubscribed_at timestamp,
   created_at timestamp default now()
 );
 
--- CAMPAIGNS
-create table campaigns (
+-- EMAIL ANALYTICS (Resumen de estadísticas por campaña)
+create table email_analytics (
   id uuid primary key default gen_random_uuid(),
-  name text not null,
-  template_id uuid references templates(id),
-  segment text,
-  created_by uuid references users(id),
+  campaign_id uuid references email_campaigns(id) on delete cascade,
+  date date not null,
+  total_recipients integer default 0,
+  total_sent integer default 0,
+  total_delivered integer default 0,
+  total_opened integer default 0,
+  total_clicked integer default 0,
+  total_bounced integer default 0,
+  total_unsubscribed integer default 0,
+  total_conversions integer default 0,
   created_at timestamp default now()
 );
 
@@ -180,4 +217,14 @@ create index idx_notifications_user_id on notifications(user_id);
 create index idx_settings_user_id on settings(user_id);
 create index idx_support_tickets_user_id on support_tickets(user_id);
 create index idx_form_leads_type on form_leads(type);
-create index idx_activities_resource on activities(resource_type, resource_id); 
+create index idx_activities_resource on activities(resource_type, resource_id);
+
+-- ÍNDICES PARA EMAIL MARKETING
+create index idx_email_templates_segment on email_templates(segment);
+create index idx_email_campaigns_template_id on email_campaigns(template_id);
+create index idx_email_campaigns_status on email_campaigns(status);
+create index idx_email_campaigns_segment on email_campaigns(segment);
+create index idx_email_tracking_campaign_id on email_tracking(campaign_id);
+create index idx_email_tracking_recipient on email_tracking(recipient_email);
+create index idx_email_analytics_campaign_id on email_analytics(campaign_id);
+create index idx_email_analytics_date on email_analytics(date); 
