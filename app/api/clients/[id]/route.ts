@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getClient, updateClient, deleteClient } from "@/lib/data/clients"
+import { getClientById, updateClient, deleteClient } from "@/lib/data/clients"
 import { z } from "zod"
 
 const updateClientSchema = z.object({
@@ -18,7 +18,7 @@ const updateClientSchema = z.object({
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
-    const client = await getClient(params.id)
+    const client = await getClientById(params.id)
     if (!client) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 })
     }

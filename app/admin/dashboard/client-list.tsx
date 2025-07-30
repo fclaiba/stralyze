@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Search, Filter, Eye, Edit, Trash2, Download, X, ChevronDown, ChevronUp } from "lucide-react"
+import { Search, Filter, Eye, Edit, Trash2, Download, X, ChevronDown, ChevronUp, FileText, FileDown } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import type { Client } from "@/types/client"
+import { exportToCSV, exportToPDF, paginateData, advancedSearch, formatDate, formatDateTime } from "@/lib/utils"
 
 // Mock data for development
 const mockClients: Client[] = [
@@ -201,6 +202,13 @@ interface FilterState {
   dateTo: string
 }
 
+interface PaginationState {
+  currentPage: number
+  pageSize: number
+  totalPages: number
+  totalItems: number
+}
+
 export default function ClientList({ onStatusChange, clients: propClients }: ClientListProps) {
   const [clients, setClients] = useState<Client[]>(propClients || [])
   const [filteredClients, setFilteredClients] = useState<Client[]>([])
@@ -223,6 +231,7 @@ export default function ClientList({ onStatusChange, clients: propClients }: Cli
   // Estado de paginación
   const [currentPage, setCurrentPage] = useState(1)
   const [clientsPerPage, setClientsPerPage] = useState(10)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     if (propClients) {
@@ -363,14 +372,9 @@ export default function ClientList({ onStatusChange, clients: propClients }: Cli
 
   const activeFiltersCount = Object.values(filters).filter(value => value !== "" && value !== "all").length
 
-  // Calcular los clientes a mostrar
-  const totalClients = filteredClients.length
-  const totalPages = Math.ceil(totalClients / clientsPerPage)
-  const paginatedClients = filteredClients.slice((currentPage - 1) * clientsPerPage, currentPage * clientsPerPage)
-
   // Cambiar de página
   const goToPage = (page: number) => {
-    if (page >= 1 && page <= totalPages) setCurrentPage(page)
+    if (page >= 1 && page <= paginatedData.totalPages) setCurrentPage(page)
   }
 
   // Cambiar cantidad por página
@@ -379,13 +383,64 @@ export default function ClientList({ onStatusChange, clients: propClients }: Cli
     setCurrentPage(1)
   }
 
+  // Funciones de exportación
+  const handleExportCSV = () => {
+    setExporting(true)
+    try {
+      exportToCSV(filteredClients, `clients-${new Date().toISOString().split('T')[0]}`)
+    } catch (error) {
+      console.error('Error exporting CSV:', error)
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleExportPDF = async () => {
+    setExporting(true)
+    try {
+      await exportToPDF(
+        filteredClients, 
+        `clients-${new Date().toISOString().split('T')[0]}`,
+        'Client List Report'
+      )
+    } catch (error) {
+      console.error('Error exporting PDF:', error)
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  // Calcular datos paginados
+  const paginatedData = paginateData(filteredClients, currentPage, clientsPerPage)
+
   return (
-    <Card className="bg-gray-800/80 border-white/20 backdrop-blur-sm">
+    <Card className="bg-gray-800/80 border-white/20 backdrop-blur-sm" data-testid="client-list">
       <CardHeader>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <CardTitle className="text-gray-200">Recent Clients</CardTitle>
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportCSV}
+                disabled={exporting || filteredClients.length === 0}
+                className="bg-gray-700/50 border-gray-600 text-gray-200 hover:bg-gray-600/50"
+                data-testid="export-csv"
+              >
+                <FileDown className="h-4 w-4 mr-2" />
+                {exporting ? 'Exporting...' : 'Export CSV'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportPDF}
+                disabled={exporting || filteredClients.length === 0}
+                className="bg-gray-700/50 border-gray-600 text-gray-200 hover:bg-gray-600/50"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                {exporting ? 'Exporting...' : 'Export PDF'}
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -423,6 +478,7 @@ export default function ClientList({ onStatusChange, clients: propClients }: Cli
               value={filters.searchTerm}
               onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
               className="pl-10 bg-gray-700/50 border-gray-600 text-gray-200 placeholder-gray-400"
+              data-testid="search-input"
             />
           </div>
 
@@ -531,8 +587,8 @@ export default function ClientList({ onStatusChange, clients: propClients }: Cli
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedClients.map((client) => (
-                  <TableRow key={client.id} className="border-gray-700 hover:bg-white/10 group">
+                {paginatedData.data.map((client) => (
+                  <TableRow key={client.id} className="border-gray-700 hover:bg-white/10 group" data-testid="client-row">
                     <TableCell className="text-gray-200 font-medium">{client.company}</TableCell>
                     <TableCell>
                       <div className="text-gray-200">{client.contact}</div>
@@ -564,7 +620,7 @@ export default function ClientList({ onStatusChange, clients: propClients }: Cli
             {filteredClients.length > 0 && (
               <div className="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 text-sm text-gray-400">
                 <div>
-                  Showing {(currentPage - 1) * clientsPerPage + 1} - {Math.min(currentPage * clientsPerPage, totalClients)} of {totalClients} clients
+                  Showing {paginatedData.data.length > 0 ? (currentPage - 1) * clientsPerPage + 1 : 0} - {Math.min(currentPage * clientsPerPage, paginatedData.totalItems)} of {paginatedData.totalItems} clients
                 </div>
                 <div className="flex items-center gap-2">
                   <span>Rows per page:</span>
@@ -579,7 +635,7 @@ export default function ClientList({ onStatusChange, clients: propClients }: Cli
                     </SelectContent>
                   </Select>
                   <div className="flex gap-1 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent rounded">
-                    {Array.from({ length: totalPages }, (_, i) => (
+                    {Array.from({ length: paginatedData.totalPages }, (_, i) => (
                       <button
                         key={i + 1}
                         onClick={() => goToPage(i + 1)}

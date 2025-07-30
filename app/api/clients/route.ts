@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getClients, createClient } from "@/lib/data/clients"
+import { getAllClients, createClient } from "@/lib/data/clients"
 import { z } from "zod"
 
 const createClientSchema = z.object({
@@ -18,7 +18,7 @@ const createClientSchema = z.object({
 
 export async function GET() {
   try {
-    const clients = await getClients()
+    const clients = await getAllClients()
     return NextResponse.json(clients)
   } catch (error) {
     return NextResponse.json({ error: "Failed to fetch clients" }, { status: 500 })

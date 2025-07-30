@@ -31,7 +31,7 @@ describe('HeroWithCanvasReveal', () => {
   it('should have correct structure and classes', () => {
     render(<HeroWithCanvasReveal />)
     
-    const heroSection = screen.getByRole('banner') || document.querySelector('#home')
+    const heroSection = document.querySelector('#home')
     expect(heroSection).toHaveClass('relative', 'min-h-screen', 'flex', 'items-center', 'justify-center')
   })
 

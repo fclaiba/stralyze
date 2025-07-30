@@ -83,7 +83,7 @@ export default function AcquisitionMetrics({ className }: AcquisitionMetricsProp
   }
 
   return (
-    <Card className={`bg-gray-800/80 border-white/20 backdrop-blur-sm ${className}`}>
+    <Card className={`bg-gray-800/80 border-white/20 backdrop-blur-sm ${className}`} data-testid="acquisition-metrics">
       <CardHeader>
         <CardTitle className="text-gray-200 flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-blue-400" />

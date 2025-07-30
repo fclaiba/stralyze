@@ -111,7 +111,7 @@ export default function RecentRegistrations({ users: propUsers }: RecentRegistra
   }
 
   return (
-    <Card className="bg-gray-800/80 border-white/20 backdrop-blur-sm">
+    <Card className="bg-gray-800/80 border-white/20 backdrop-blur-sm" data-testid="recent-registrations">
       <CardHeader>
         <CardTitle className="text-gray-200 flex items-center gap-2">
           <UserPlus className="h-5 w-5 text-green-400" />

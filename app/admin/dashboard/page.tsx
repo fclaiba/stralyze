@@ -112,7 +112,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-black/80 text-gray-200 relative overflow-hidden">
+    <div className="min-h-screen bg-black/80 text-gray-200 relative overflow-hidden" data-testid="dashboard-page">
       <CanvasRevealEffect
         animationSpeed={2}
         containerClassName="absolute inset-0"

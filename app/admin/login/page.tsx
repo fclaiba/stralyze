@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -21,7 +21,7 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>
 
-export default function LoginPage() {
+function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
@@ -103,12 +103,12 @@ export default function LoginPage() {
                     <FormLabel className="text-gray-700">Email</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                         <Input
+                          {...field}
                           type="email"
                           placeholder="Enter your email"
-                          {...field}
-                          className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          className="pl-10 bg-gray-50 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                         />
                       </div>
                     </FormControl>
@@ -116,7 +116,7 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-
+              
               <FormField
                 control={form.control}
                 name="password"
@@ -125,12 +125,12 @@ export default function LoginPage() {
                     <FormLabel className="text-gray-700">Password</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                         <Input
+                          {...field}
                           type={showPassword ? "text" : "password"}
                           placeholder="Enter your password"
-                          {...field}
-                          className="pl-10 pr-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          className="pl-10 pr-10 bg-gray-50 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                         />
                         <Button
                           type="button"
@@ -140,9 +140,9 @@ export default function LoginPage() {
                           onClick={() => setShowPassword(!showPassword)}
                         >
                           {showPassword ? (
-                            <EyeOff className="h-4 w-4 text-gray-500" />
+                            <EyeOff className="h-4 w-4 text-gray-400" />
                           ) : (
-                            <Eye className="h-4 w-4 text-gray-500" />
+                            <Eye className="h-4 w-4 text-gray-400" />
                           )}
                         </Button>
                       </div>
@@ -151,7 +151,7 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-
+              
               <Button
                 type="submit"
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
@@ -168,28 +168,33 @@ export default function LoginPage() {
               </Button>
             </form>
           </Form>
-
-          <div className="mt-6 text-center space-y-2">
+          
+          <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{" "}
-              <a
-                href="/admin/register"
-                className="text-blue-600 hover:text-blue-700 font-medium"
+              <Button
+                variant="link"
+                className="p-0 text-blue-600 hover:text-blue-700 font-medium"
+                onClick={() => router.push('/admin/register')}
               >
                 Sign up
-              </a>
-            </p>
-            <p className="text-sm text-gray-600">
-              <a
-                href="/admin/forgot-password"
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
-                Forgot your password?
-              </a>
+              </Button>
             </p>
           </div>
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   )
 }
