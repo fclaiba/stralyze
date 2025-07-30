@@ -170,15 +170,33 @@ function checkSprint4Status() {
   }
 
   // Verificar testing
-  const testFiles = [
+  const unitTestFiles = [
     '__tests__/components/email-marketing.test.tsx',
-    '__tests__/lib/email-marketing.test.ts',
+    '__tests__/lib/email-marketing.test.ts'
+  ]
+  
+  const integrationTestFiles = [
+    '__tests__/integration/email-marketing.integration.test.ts'
+  ]
+  
+  const e2eTestFiles = [
     '__tests__/e2e/email-marketing.spec.ts'
   ]
   
-  const existingTests = testFiles.filter(file => fs.existsSync(file))
-  if (existingTests.length > 0) {
+  const existingUnitTests = unitTestFiles.filter(file => fs.existsSync(file))
+  const existingIntegrationTests = integrationTestFiles.filter(file => fs.existsSync(file))
+  const existingE2ETests = e2eTestFiles.filter(file => fs.existsSync(file))
+  
+  if (existingUnitTests.length > 0) {
     sprint4Features['Testing']['Tests unitarios'] = true
+  }
+  
+  if (existingIntegrationTests.length > 0) {
+    sprint4Features['Testing']['Tests de integración'] = true
+  }
+  
+  if (existingE2ETests.length > 0) {
+    sprint4Features['Testing']['Tests E2E'] = true
   }
 
   // Verificar integración
