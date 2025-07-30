@@ -13,14 +13,6 @@ const nextConfig = {
     },
     // Code splitting optimizado
     optimizeCss: true,
-    modularizeImports: {
-      'lucide-react': {
-        transform: 'lucide-react/dist/esm/icons/{{member}}',
-      },
-      '@radix-ui/react-icons': {
-        transform: '@radix-ui/react-icons/dist/{{member}}',
-      },
-    },
   },
 
   // Optimización de imágenes
@@ -34,7 +26,6 @@ const nextConfig = {
   },
 
   // Optimización de compilación
-  swcMinify: true,
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },
@@ -105,11 +96,6 @@ const nextConfig = {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=()',
           },
-          // Cache optimization headers
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
         ],
       },
       {
@@ -122,7 +108,7 @@ const nextConfig = {
         ],
       },
       {
-        source: '/(.*\\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot))',
+        source: '/_next/static/(.*)',
         headers: [
           {
             key: 'Cache-Control',
